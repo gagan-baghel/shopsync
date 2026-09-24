@@ -12,7 +12,7 @@ Pick a role on the login screen and the matching test credentials fill in automa
 | Customer | customer2@test.com   | `Test@123` |
 | Supplier | supplier@test.com    | `Test@123` |
 
-The login screen has a role selector (Customer/Supplier cards), email, password with a show/hide toggle, and inline errors (wrong password, or the wrong role for that account). The session is stored in AsyncStorage and survives app restarts. **Switch** in the header logs out and returns to the role picker.
+The login screen has a role selector (Customer/Supplier cards), email, password with a show/hide toggle, and inline errors (wrong password, or the wrong role for that account). The session is stored in AsyncStorage and survives app restarts. **Logout** (top right) signs out and returns to the role picker, where you can pick the other role.
 
 ## Features
 

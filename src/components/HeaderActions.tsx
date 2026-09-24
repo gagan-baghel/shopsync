@@ -5,7 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { useStore } from "@/store";
 import { colors } from "@/theme";
 
-/** Role pill + log out / switch role. Clearing the session lets the root guard route back to login. */
+/** Role pill + Logout. Clearing the session lets the root guard route back to the login / role picker. */
 export function HeaderActions() {
   const session = useStore((s) => s.session);
   const setSession = useStore((s) => s.setSession);
@@ -30,10 +30,10 @@ export function HeaderActions() {
         hitSlop={10}
         style={s.btn}
         accessibilityRole="button"
-        accessibilityLabel="Log out or switch role"
+        accessibilityLabel="Logout"
       >
-        <Ionicons name="swap-horizontal" size={18} color={colors.text} />
-        <Text style={s.btnText}>Switch</Text>
+        <Ionicons name="log-out-outline" size={18} color={colors.danger} />
+        <Text style={[s.btnText, { color: colors.danger }]}>Logout</Text>
       </Pressable>
     </View>
   );
