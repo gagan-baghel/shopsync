@@ -1,12 +1,12 @@
 import { useMutation } from "convex/react";
-import { ConvexError } from "convex/values";
 import { ReactNode, useState } from "react";
 import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "../../convex/_generated/api";
-import { categories, Product } from "@/lib";
+import { categories, errorMessage, Product } from "@/lib";
+import { MAX_STOCK } from "@/shared";
 import { useStore } from "@/store";
 import { colors } from "@/theme";
 
@@ -78,7 +78,7 @@ export function ProductSheet({ visible, onClose, product, stock = 0 }: {
       else await create(fields);
       reset();
     } catch (e) {
-      setError(e instanceof ConvexError ? String(e.data) : "Couldn't save. Check your connection and try again.");
+      setError(errorMessage(e, "Couldn't save. Check your connection and try again."));
     } finally {
       setSaving(false);
     }
@@ -94,7 +94,7 @@ export function ProductSheet({ visible, onClose, product, stock = 0 }: {
         reset();
       } catch (e) {
         setSaving(false);
-        setError(e instanceof ConvexError ? String(e.data) : "Couldn't delete. Check your connection and try again.");
+        setError(errorMessage(e, "Couldn't delete. Check your connection and try again."));
       }
     });
 
@@ -114,13 +114,19 @@ export function ProductSheet({ visible, onClose, product, stock = 0 }: {
                 <TextInput style={s.input} value={form.price} onChangeText={set("price")} placeholder="29.99" placeholderTextColor={colors.muted} keyboardType="decimal-pad" />
               </Field>
               <Field label="Stock" flex>
-                <TextInput style={s.input} value={form.stock} onChangeText={(t) => set("stock")(t.replace(/[^0-9]/g, "").slice(0, 5))} keyboardType="number-pad" />
+                <TextInput style={s.input} value={form.stock} onChangeText={(t) => set("stock")(t.replace(/[^0-9]/g, "").slice(0, String(MAX_STOCK).length))} keyboardType="number-pad" />
               </Field>
             </View>
             <Field label="Category">
               <View style={s.chips}>
                 {categories.map((c) => (
-                  <Pressable key={c} onPress={() => set("category")(c)} style={[s.chip, form.category === c && s.chipOn]}>
+                  <Pressable
+                    key={c}
+                    onPress={() => set("category")(c)}
+                    style={[s.chip, form.category === c && s.chipOn]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: form.category === c }}
+                  >
                     <Text style={[s.chipText, form.category === c && { color: "#fff" }]}>{c}</Text>
                   </Pressable>
                 ))}

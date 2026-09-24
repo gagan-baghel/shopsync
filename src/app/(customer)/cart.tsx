@@ -1,18 +1,16 @@
-import { useMutation } from "convex/react";
-import { ConvexError } from "convex/values";
-import { useEffect, useState } from "react";
-import { api } from "../../../convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
+import { useMutation } from "convex/react";
 import { router } from "expo-router";
-import { ActivityIndicator, Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { api } from "../../../convex/_generated/api";
 import { EmptyState } from "@/components/EmptyState";
 import { SwipeableRow } from "@/components/SwipeableRow";
 import { ProductImage } from "@/components/ProductImage";
-import { money, useInventory, useProducts } from "@/lib";
+import { errorMessage, money, notify, useInventory, useProducts } from "@/lib";
+import { shippingFor } from "@/shared";
 import { useStore } from "@/store";
 import { colors, shadow } from "@/theme";
-
-const SHIPPING_FREE_OVER = 100;
 
 export default function Cart() {
   const cart = useStore((s) => s.cart);
@@ -52,10 +50,7 @@ export default function Cart() {
   };
   const blocked = items.some(({ p, qty }) => problem(p.id, qty));
   const subtotal = items.reduce((a, { p, qty }) => a + p.price * qty, 0);
-  const shipping = subtotal >= SHIPPING_FREE_OVER ? 0 : 6.99;
-
-  const notify = (title: string, msg: string) =>
-    Platform.OS === "web" ? window.alert(`${title}\n${msg}`) : Alert.alert(title, msg);
+  const shipping = shippingFor(subtotal);
 
   const checkout = async () => {
     if (placing) return;
@@ -65,7 +60,7 @@ export default function Cart() {
       clearCart();
       notify("Order placed!", `Thank you! We charged ${money(total)}.`);
     } catch (e) {
-      notify("Couldn't place order", e instanceof ConvexError ? String(e.data) : "Check your connection and try again.");
+      notify("Couldn't place order", errorMessage(e));
     } finally {
       setPlacing(false);
     }
@@ -88,7 +83,12 @@ export default function Cart() {
                 {problem(p.id, qty) && <Text style={s.problem}>{problem(p.id, qty)}</Text>}
               </View>
               <View style={s.qty}>
-                <Pressable style={s.qtyBtn} onPress={() => setQty(p.id, qty - 1)} accessibilityLabel="Decrease quantity">
+                <Pressable
+                  style={s.qtyBtn}
+                  onPress={() => setQty(p.id, qty - 1)}
+                  accessibilityRole="button"
+                  accessibilityLabel={qty === 1 ? `Remove ${p.name}` : `Decrease quantity of ${p.name}`}
+                >
                   <Ionicons name={qty === 1 ? "trash-outline" : "remove"} size={16} color={colors.text} />
                 </Pressable>
                 <Text style={s.qtyText}>{qty}</Text>
@@ -96,7 +96,8 @@ export default function Cart() {
                   style={s.qtyBtn}
                   onPress={() => setQty(p.id, qty + 1)}
                   disabled={qty >= (inventory?.get(p.id)?.stock ?? Infinity)}
-                  accessibilityLabel="Increase quantity"
+                  accessibilityRole="button"
+                  accessibilityLabel={`Increase quantity of ${p.name}`}
                 >
                   <Ionicons name="add" size={16} color={qty >= (inventory?.get(p.id)?.stock ?? Infinity) ? colors.border : colors.text} />
                 </Pressable>

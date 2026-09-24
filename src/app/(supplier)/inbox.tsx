@@ -21,6 +21,8 @@ export default function Inbox() {
       renderItem={({ item: t }) => (
         <Pressable
           style={s.row}
+          accessibilityRole="button"
+          accessibilityLabel={`Chat with ${t.name}`}
           onPress={() => router.push({ pathname: "/chat/[customerId]", params: { customerId: t.customerId, name: t.name } })}
         >
           <View style={s.avatar}>

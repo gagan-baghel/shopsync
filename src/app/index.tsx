@@ -1,20 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "convex/react";
-import { ConvexError } from "convex/values";
 import { useState } from "react";
 import {
   ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "../../convex/_generated/api";
+import { errorMessage } from "@/lib";
+import { TEST_ACCOUNTS, TEST_PASSWORD } from "@/shared";
 import { Role, useStore } from "@/store";
 import { colors, shadow } from "@/theme";
 
-// Seeded by convex/seed.ts — shown here for one-tap demo sign-in.
-const TEST_ACCOUNTS: Record<Role, { email: string; password: string }> = {
-  customer: { email: "customer@test.com", password: "Test@123" },
-  supplier: { email: "supplier@test.com", password: "Test@123" },
-};
+// One-tap demo sign-in: the first seeded account of each role.
+const defaultEmail = (role: Role) => TEST_ACCOUNTS.find((a) => a.role === role)!.email;
 
 const ROLES: { role: Role; title: string; desc: string; icon: keyof typeof Ionicons.glyphMap; color: string; soft: string }[] = [
   { role: "customer", title: "Customer", desc: "Browse, cart & chat", icon: "bag-handle", color: colors.primary, soft: colors.primarySoft },
@@ -25,8 +23,8 @@ export default function Login() {
   const setSession = useStore((s) => s.setSession);
   const login = useMutation(api.auth.login);
   const [role, setRole] = useState<Role>("customer");
-  const [email, setEmail] = useState(TEST_ACCOUNTS.customer.email);
-  const [password, setPassword] = useState(TEST_ACCOUNTS.customer.password);
+  const [email, setEmail] = useState<string>(defaultEmail("customer"));
+  const [password, setPassword] = useState<string>(TEST_PASSWORD);
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,8 +32,8 @@ export default function Login() {
 
   const pickRole = (r: Role) => {
     setRole(r);
-    setEmail(TEST_ACCOUNTS[r].email);
-    setPassword(TEST_ACCOUNTS[r].password);
+    setEmail(defaultEmail(r));
+    setPassword(TEST_PASSWORD);
     setError(null);
   };
 
@@ -47,7 +45,7 @@ export default function Login() {
     try {
       setSession(await login({ email, password, role }));
     } catch (e) {
-      setError(e instanceof ConvexError ? String(e.data) : "Can't reach the server. Check your connection.");
+      setError(errorMessage(e, "Can't reach the server. Check your connection."));
     } finally {
       setLoading(false);
     }
@@ -113,7 +111,12 @@ export default function Login() {
               onSubmitEditing={onSubmit}
               returnKeyType="go"
             />
-            <Pressable onPress={() => setShowPw((v) => !v)} hitSlop={10} accessibilityLabel="Toggle password visibility">
+            <Pressable
+              onPress={() => setShowPw((v) => !v)}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={showPw ? "Hide password" : "Show password"}
+            >
               <Ionicons name={showPw ? "eye-off-outline" : "eye-outline"} size={18} color={colors.muted} />
             </Pressable>
           </View>
@@ -125,10 +128,12 @@ export default function Login() {
           </Pressable>
 
           <View style={s.testBox}>
-            <Text style={s.testTitle}>Test accounts (password: Test@123)</Text>
-            <Text style={s.testLine}>Customer · customer@test.com</Text>
-            <Text style={s.testLine}>Customer · customer2@test.com</Text>
-            <Text style={s.testLine}>Supplier · supplier@test.com</Text>
+            <Text style={s.testTitle}>Test accounts (password: {TEST_PASSWORD})</Text>
+            {TEST_ACCOUNTS.map((a) => (
+              <Text key={a.email} style={s.testLine}>
+                {a.role === "customer" ? "Customer" : "Supplier"} · {a.email}
+              </Text>
+            ))}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

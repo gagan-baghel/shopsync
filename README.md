@@ -1,6 +1,6 @@
 # ShopSync: Dual-Role Commerce App
 
-React Native (Expo SDK 57, TypeScript) app with switchable **Customer** and **Supplier** roles, static product and analytics data, and **real-time Customer ↔ Supplier chat on Convex**.
+React Native (Expo SDK 57, TypeScript) app with switchable **Customer** and **Supplier** roles, a live product catalog, orders and inventory, and **real-time Customer ↔ Supplier chat**, all on Convex.
 
 ## Test accounts
 
@@ -24,8 +24,8 @@ The login screen has a role selector (Customer/Supplier cards), email, password 
 - **Supplier**
   - Live sales: customer checkouts are saved as orders in Convex (priced server-side, stock deducted), and the dashboard's revenue, order count, year-over-year deltas, monthly chart and "Recent orders" update instantly.
   - Analytics: KPI tiles, revenue trend with a line/bar toggle and touch tooltip (react-native-gifted-charts), and a category donut drawn with react-native-svg.
-  - Inventory: live in-stock switches and a bottom-sheet stock editor. Changes are written to Convex, so customers see stock updates instantly.
-  - Add product: bottom-sheet form (name, price, stock, category, optional image URL and description), validated on the server. New products appear instantly in every customer's catalog.
+  - Inventory: live in-stock switches. Changes are written to Convex, so customers see them instantly.
+  - Product management: one bottom-sheet form to **add** a product, or **edit** every field (name, price, stock, category, image URL, description) and **delete** it. Everything is validated on the server and shows up live in every customer's catalog.
   - Tap any inventory row to open the full product page with specs and live units in stock.
   - Inbox of customer threads leading to each chat.
 - **Chat**
@@ -46,8 +46,9 @@ src/app/           expo-router routes
   (supplier)/        dashboard, inventory, inbox tabs
   product/[id].tsx   product detail (shared by both roles)
   chat/[customerId]  supplier ↔ customer thread
-src/components/    ChatThread, SwipeableRow, CartBadge, Donut, AddProductSheet, ProductImage, EmptyState, HeaderActions
-src/data/          products.json, analytics.ts (static data)
+src/components/    ChatThread, SwipeableRow, CartBadge, Donut, ProductSheet, ProductImage, EmptyState, HeaderActions
+src/data/          products.json (catalog seed), analytics.ts (historical dashboard figures)
+src/shared.ts      constants shared by app + backend (categories, shipping, stock limit, test accounts)
 src/store.ts       zustand + AsyncStorage (session, cart)
 src/lib.ts         catalog helpers, debounce, live inventory hook
 patches/           small web fix for react-native-gifted-charts (applied on postinstall)
@@ -60,7 +61,7 @@ Role gating uses `Stack.Protected`: once the session is set or cleared, the rout
 ```bash
 npm install
 npx convex dev          # dev backend (writes EXPO_PUBLIC_CONVEX_URL to .env.local)
-npm run seed            # creates the test accounts + inventory (idempotent)
+npm run seed            # creates the test accounts, product catalog and stock levels (idempotent)
 npx expo start          # needs a dev build (native modules) or run --web
 ```
 

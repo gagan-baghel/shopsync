@@ -1,9 +1,8 @@
 import { v, ConvexError } from "convex/values";
-import { mutation, query, MutationCtx } from "./_generated/server";
+import { mutation, query, MutationCtx, QueryCtx } from "./_generated/server";
 import { userFromToken } from "./auth";
-import catalog from "../src/data/products.json";
-
-const CATEGORIES = new Set(catalog.map((p) => p.category));
+import { CATEGORIES, MAX_STOCK } from "../src/shared";
+import { inventoryRow } from "./inventory";
 
 const fields = {
   name: v.string(),
@@ -30,12 +29,12 @@ async function requireSupplier(ctx: MutationCtx, token: string) {
 function validate(a: { name: string; category: string; price: number; stock: number; description?: string; image?: string }) {
   const name = a.name.trim();
   if (name.length < 2 || name.length > 80) throw new ConvexError("Name must be 2–80 characters.");
-  if (!CATEGORIES.has(a.category)) throw new ConvexError("Pick a valid category.");
+  if (!CATEGORIES.includes(a.category)) throw new ConvexError("Pick a valid category.");
   const price = Math.round(a.price * 100) / 100;
   if (!Number.isFinite(price) || price < 0.01 || price > 100000)
     throw new ConvexError("Price must be between 0.01 and 100,000.");
-  if (!Number.isInteger(a.stock) || a.stock < 0 || a.stock > 99999)
-    throw new ConvexError("Stock must be a whole number from 0 to 99,999.");
+  if (!Number.isInteger(a.stock) || a.stock < 0 || a.stock > MAX_STOCK)
+    throw new ConvexError(`Stock must be a whole number from 0 to ${MAX_STOCK.toLocaleString("en-US")}.`);
   const image = a.image?.trim() || undefined;
   if (image && (image.length > 2048 || !/^https:\/\/\S+$/.test(image)))
     throw new ConvexError("Image must be an https:// link.");
@@ -43,17 +42,18 @@ function validate(a: { name: string; category: string; price: number; stock: num
 }
 
 /** Products are addressed by `key` (seeded) or their `_id` (supplier-added) — the same id inventory and carts use. */
-async function findProduct(ctx: MutationCtx, id: string) {
+export async function getProduct(ctx: QueryCtx, id: string) {
   const byKey = await ctx.db.query("products").withIndex("by_key", (q) => q.eq("key", id)).unique();
   if (byKey) return byKey;
   const docId = ctx.db.normalizeId("products", id);
-  const doc = docId && (await ctx.db.get(docId));
+  return docId ? await ctx.db.get(docId) : null;
+}
+
+async function findProduct(ctx: MutationCtx, id: string) {
+  const doc = await getProduct(ctx, id);
   if (!doc) throw new ConvexError("Product not found.");
   return doc;
 }
-
-const inventoryRow = (ctx: MutationCtx, productId: string) =>
-  ctx.db.query("inventory").withIndex("by_product", (q) => q.eq("productId", productId)).unique();
 
 export const create = mutation({
   args: { token: v.string(), ...fields },

@@ -40,6 +40,7 @@ const ProductCard = memo(function ProductCard({ p, available, stock }: { p: Prod
             }}
             style={[s.add, !canAdd && { backgroundColor: colors.border }]}
             hitSlop={6}
+            accessibilityRole="button"
             accessibilityLabel={`Add ${p.name} to cart`}
           >
             <Ionicons name="add" size={20} color="#fff" />
@@ -81,7 +82,7 @@ export default function Shop() {
           autoCorrect={false}
         />
         {!!query && (
-          <Pressable onPress={() => setQuery("")} hitSlop={10} accessibilityLabel="Clear search">
+          <Pressable onPress={() => setQuery("")} hitSlop={10} accessibilityRole="button" accessibilityLabel="Clear search">
             <Ionicons name="close-circle" size={18} color={colors.muted} />
           </Pressable>
         )}
@@ -91,7 +92,13 @@ export default function Shop() {
           {[null, ...categories].map((c) => {
             const active = c === category;
             return (
-              <Pressable key={c ?? "all"} onPress={() => setCategory(c)} style={[s.chip, active && s.chipActive]}>
+              <Pressable
+                key={c ?? "all"}
+                onPress={() => setCategory(c)}
+                style={[s.chip, active && s.chipActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+              >
                 <Text style={[s.chipText, active && s.chipTextActive]}>{c ?? "All"}</Text>
               </Pressable>
             );

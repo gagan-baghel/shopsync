@@ -26,20 +26,28 @@ export default function Dashboard() {
   const monthlyRevenue = staticRevenue.map((d, i) => ({ ...d, value: d.value + (live?.byMonth?.[i] ?? 0) }));
   // Grow the y-axis for big live months (the chart library won't); multiples of 12k keep 4 even sections.
   const chartMax = Math.ceil(Math.max(48000, ...monthlyRevenue.map((d) => d.value)) / 12000) * 12000;
+  // Donut: historical category revenue (static share of baseline) + live category sales, re-expressed as %.
+  const categoryRevenue = categoryShare.map((c) => ({
+    ...c,
+    amount: (baseline.revenue * c.value) / 100 + (live?.byCategory?.[c.label] ?? 0),
+  }));
+  const categoryTotal = categoryRevenue.reduce((a, c) => a + c.amount, 0);
+  const categories = categoryRevenue.map((c) => ({ ...c, value: Math.round((c.amount / categoryTotal) * 1000) / 10 }));
+  const top = [...categories].sort((a, b) => b.value - a.value)[0];
+
   const pct = (now: number, then: number) => {
     const d = (now / then - 1) * 100;
     return `${d >= 0 ? "+" : ""}${d.toFixed(1)}%`;
   };
   const kpis = [
-    { label: "Revenue (YTD)", value: `$${Math.round(revenue).toLocaleString("en-US")}`, delta: pct(revenue, lastYear.revenue), icon: "cash-outline" },
-    { label: "Orders", value: orders.toLocaleString("en-US"), delta: pct(orders, lastYear.orders), icon: "receipt-outline" },
-    { label: "Avg. order", value: money(revenue / orders), delta: pct(revenue / orders, lastYear.revenue / lastYear.orders), icon: "trending-up-outline" },
-    { label: "Returns", value: "2.4%", delta: "-0.6%", icon: "return-down-back-outline" },
+    { label: "Revenue (YTD)", value: `$${Math.round(revenue).toLocaleString("en-US")}`, delta: pct(revenue, lastYear.revenue), icon: "cash-outline", lowerIsBetter: false },
+    { label: "Orders", value: orders.toLocaleString("en-US"), delta: pct(orders, lastYear.orders), icon: "receipt-outline", lowerIsBetter: false },
+    { label: "Avg. order", value: money(revenue / orders), delta: pct(revenue / orders, lastYear.revenue / lastYear.orders), icon: "trending-up-outline", lowerIsBetter: false },
+    { label: "Returns", value: "2.4%", delta: "-0.6%", icon: "return-down-back-outline", lowerIsBetter: true },
   ] as const;
   const chartWidth = Math.min(width, 640) - 32 - 32 - 40; // screen - page padding - card padding - y-axis
   const spacing = (chartWidth - 24) / (monthlyRevenue.length - 1);
   const barSlot = (chartWidth - 20) / monthlyRevenue.length;
-  const top = [...categoryShare].sort((a, b) => b.value - a.value)[0];
 
   return (
     <ScrollView contentContainerStyle={s.page}>
@@ -49,7 +57,7 @@ export default function Dashboard() {
             <Ionicons name={x.icon} size={18} color={colors.supplier} />
             <Text style={s.kpiValue}>{x.value}</Text>
             <Text style={s.kpiLabel}>{x.label}</Text>
-            <Text style={[s.delta, { color: colors.success }]}>{x.delta} vs last yr</Text>
+            <Text style={[s.delta, { color: x.delta.startsWith("-") === x.lowerIsBetter ? colors.success : colors.danger }]}>{x.delta} vs last yr</Text>
           </View>
         ))}
       </View>
@@ -84,7 +92,7 @@ export default function Dashboard() {
         <View style={s.cardHead}>
           <View>
             <Text style={s.h2}>Revenue trend</Text>
-            <Text style={s.muted}>Monthly, 2026</Text>
+            <Text style={s.muted}>Monthly, {new Date().getFullYear()}</Text>
           </View>
           <View style={s.seg}>
             {(["line", "bar"] as const).map((m) => (
@@ -185,12 +193,12 @@ export default function Dashboard() {
         <Text style={s.h2}>Sales by category</Text>
         <Text style={s.muted}>Share of revenue</Text>
         <View style={s.pieRow}>
-          <Donut data={categoryShare}>
+          <Donut data={categories}>
             <Text style={s.centerValue}>{top.value}%</Text>
             <Text style={s.centerLabel}>{top.label}</Text>
           </Donut>
           <View style={s.legend}>
-            {categoryShare.map((c) => (
+            {categories.map((c) => (
               <View key={c.label} style={s.legendRow}>
                 <View style={[s.dot, { backgroundColor: c.color }]} />
                 <Text style={s.legendLabel}>{c.label}</Text>

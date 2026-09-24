@@ -1,21 +1,14 @@
 import { internalMutation } from "./_generated/server";
 import { hash } from "./auth";
 import products from "../src/data/products.json";
-
-// Test accounts — also listed on the login screen.
-const ACCOUNTS = [
-  { email: "customer@test.com", name: "Alex Customer", role: "customer" as const },
-  { email: "customer2@test.com", name: "Sam Shopper", role: "customer" as const },
-  { email: "supplier@test.com", name: "Jordan Supplier", role: "supplier" as const },
-];
-export const TEST_PASSWORD = "Test@123";
+import { TEST_ACCOUNTS, TEST_PASSWORD } from "../src/shared";
 
 // Idempotent: `npx convex run seed:run`
 export const run = internalMutation({
   args: {},
   handler: async (ctx) => {
     const passwordHash = await hash(TEST_PASSWORD);
-    for (const a of ACCOUNTS) {
+    for (const a of TEST_ACCOUNTS) {
       const exists = await ctx.db
         .query("users")
         .withIndex("by_email", (q) => q.eq("email", a.email))

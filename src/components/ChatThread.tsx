@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
-import { ConvexError } from "convex/values";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { useState } from "react";
 import {
-  ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Pressable, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, FlatList, KeyboardAvoidingView, Pressable, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { errorMessage, notify } from "@/lib";
 import { useStore } from "@/store";
 import { colors } from "@/theme";
 import { EmptyState } from "./EmptyState";
@@ -35,7 +35,7 @@ export function ChatThread({ customerId }: { customerId?: Id<"users"> }) {
     setText("");
     send({ token: session.token, body, customerId }).catch((e) => {
       setText((t) => t || body); // restore the draft unless the user already typed something new
-      Alert.alert("Message not sent", e instanceof ConvexError ? String(e.data) : "Check your connection and try again.");
+      notify("Message not sent", errorMessage(e));
     });
   };
 
@@ -95,6 +95,7 @@ export function ChatThread({ customerId }: { customerId?: Id<"users"> }) {
           onPress={onSend}
           disabled={!text.trim()}
           style={[s.send, { backgroundColor: text.trim() ? accent : colors.border }]}
+          accessibilityRole="button"
           accessibilityLabel="Send message"
         >
           <Ionicons name="send" size={18} color="#fff" />

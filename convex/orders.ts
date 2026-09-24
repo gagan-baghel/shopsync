@@ -1,17 +1,11 @@
 import { v, ConvexError } from "convex/values";
-import { mutation, query, MutationCtx } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { maybeUser, userFromToken } from "./auth";
+import { shippingFor } from "../src/shared";
+import { inventoryRow } from "./inventory";
+import { getProduct } from "./products";
 
-const FREE_SHIPPING_OVER = 100;
-const SHIPPING = 6.99;
 const round2 = (n: number) => Math.round(n * 100) / 100;
-
-async function productFor(ctx: MutationCtx, id: string) {
-  const byKey = await ctx.db.query("products").withIndex("by_key", (q) => q.eq("key", id)).unique();
-  if (byKey) return byKey;
-  const docId = ctx.db.normalizeId("products", id);
-  return docId ? await ctx.db.get(docId) : null;
-}
 
 /** Customer checkout: prices come from the database (never the client), stock is checked and deducted atomically. */
 export const place = mutation({
@@ -19,21 +13,19 @@ export const place = mutation({
   handler: async (ctx, { token, items }) => {
     const user = await userFromToken(ctx, token);
     if (user.role !== "customer") throw new ConvexError("Only customers can place orders.");
-    if (items.length === 0 || items.length > 50) throw new ConvexError("Your cart is empty.");
+    if (items.length === 0) throw new ConvexError("Your cart is empty.");
+    if (items.length > 50) throw new ConvexError("Too many different items in one order (max 50).");
     if (new Set(items.map((i) => i.productId)).size !== items.length) throw new ConvexError("Duplicate items in order.");
 
     const lines = [];
     for (const { productId, qty } of items) {
       if (!Number.isInteger(qty) || qty < 1 || qty > 999) throw new ConvexError("Invalid quantity.");
-      const product = await productFor(ctx, productId);
+      const product = await getProduct(ctx, productId);
       if (!product) throw new ConvexError("A product in your cart is no longer available.");
-      const inv = await ctx.db
-        .query("inventory")
-        .withIndex("by_product", (q) => q.eq("productId", productId))
-        .unique();
+      const inv = await inventoryRow(ctx, productId);
       if (!inv || !inv.inStock || inv.stock < qty)
         throw new ConvexError(`Only ${inv?.inStock ? inv.stock : 0} of "${product.name}" left.`);
-      lines.push({ inv, line: { productId, name: product.name, price: product.price, qty } });
+      lines.push({ inv, line: { productId, name: product.name, price: product.price, qty, category: product.category } });
     }
 
     // All checks passed — the mutation is a single transaction, so deductions and the order land together.
@@ -42,7 +34,7 @@ export const place = mutation({
       await ctx.db.patch(inv._id, { stock, inStock: stock > 0 && inv.inStock });
     }
     const subtotal = round2(lines.reduce((a, { line }) => a + line.price * line.qty, 0));
-    const shipping = subtotal >= FREE_SHIPPING_OVER ? 0 : SHIPPING;
+    const shipping = shippingFor(subtotal);
     const total = round2(subtotal + shipping);
     await ctx.db.insert("orders", { customerId: user._id, items: lines.map((l) => l.line), subtotal, shipping, total });
     return { total };
@@ -76,6 +68,11 @@ export const summary = query({
       const d = new Date(o._creationTime);
       if (d.getFullYear() === year) byMonth[d.getMonth()] = round2(byMonth[d.getMonth()] + o.subtotal);
     }
-    return { count: orders.length, revenue, byMonth, recent };
+    // Live revenue per category, for the dashboard donut.
+    const byCategory: Record<string, number> = {};
+    for (const o of orders)
+      for (const i of o.items)
+        if (i.category) byCategory[i.category] = round2((byCategory[i.category] ?? 0) + i.price * i.qty);
+    return { count: orders.length, revenue, byMonth, byCategory, recent };
   },
 });

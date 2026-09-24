@@ -9,7 +9,9 @@ import { api } from "../../convex/_generated/api";
 import { useHydrated, useStore } from "@/store";
 import { colors } from "@/theme";
 
-const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, { unsavedChangesWarning: false });
+const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+if (!convexUrl) throw new Error("EXPO_PUBLIC_CONVEX_URL is not set. Run `npx convex dev` or set it in eas.json.");
+const convex = new ConvexReactClient(convexUrl, { unsavedChangesWarning: false });
 
 /** Drops a persisted session the server no longer recognises (e.g. logged out elsewhere). */
 function SessionCheck({ token }: { token: string }) {

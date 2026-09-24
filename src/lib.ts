@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
+import { ConvexError } from "convex/values";
+import { Alert, Platform } from "react-native";
 import { api } from "../convex/_generated/api";
-import productsJson from "./data/products.json";
+import { CATEGORIES } from "./shared";
 
 export type Product = {
   id: string;
@@ -14,7 +16,15 @@ export type Product = {
   specs: Record<string, string>;
 };
 // Category list is fixed; the products themselves live in Convex (seeded from products.json).
-export const categories = [...new Set((productsJson as { category: string }[]).map((p) => p.category))];
+export const categories = CATEGORIES;
+
+/** User-facing text for a failed Convex call: server validation messages pass through, anything else is generic. */
+export const errorMessage = (e: unknown, fallback = "Check your connection and try again.") =>
+  e instanceof ConvexError ? String(e.data) : fallback;
+
+/** Alert that also shows on web (react-native-web's Alert.alert is a no-op). */
+export const notify = (title: string, message: string) =>
+  Platform.OS === "web" ? window.alert(`${title}\n${message}`) : Alert.alert(title, message);
 
 /** Every product, live from Convex (supplier adds/edits/deletes show up instantly). */
 export function useProducts() {

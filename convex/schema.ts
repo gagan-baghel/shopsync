@@ -24,7 +24,7 @@ export default defineSchema({
     body: v.string(),
   }).index("by_customer", ["customerId"]),
 
-  // Products added by suppliers at runtime (the base catalog ships as static JSON in the app).
+  // Seeded catalog (addressed by `key`) + supplier-added products (addressed by `_id`).
   products: defineTable({
     key: v.optional(v.string()), // stable id for seeded catalog items ("p1"…); new products use their _id
     name: v.string(),
@@ -39,7 +39,9 @@ export default defineSchema({
 
   orders: defineTable({
     customerId: v.id("users"),
-    items: v.array(v.object({ productId: v.string(), name: v.string(), price: v.number(), qty: v.number() })),
+    items: v.array(
+      v.object({ productId: v.string(), name: v.string(), price: v.number(), qty: v.number(), category: v.optional(v.string()) }),
+    ),
     subtotal: v.number(),
     shipping: v.number(),
     total: v.number(),
