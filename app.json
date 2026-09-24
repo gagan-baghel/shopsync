@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ShopSync",
-    "slug": "dual-role-commerce",
+    "slug": "gagan",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -28,6 +28,12 @@
       "expo-router",
       "expo-font"
     ],
-    "scheme": "shopsync"
+    "scheme": "shopsync",
+    "owner": "gaganbaghels-team",
+    "extra": {
+      "eas": {
+        "projectId": "d0826961-7927-4dac-9bac-5f2313c943f2"
+      }
+    }
   }
 }
