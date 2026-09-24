@@ -1,0 +1,52 @@
+diff --git a/node_modules/react-native-gifted-charts/dist/Components/BarAndLineChartsWrapper/renderHorizSections.js b/node_modules/react-native-gifted-charts/dist/Components/BarAndLineChartsWrapper/renderHorizSections.js
+index e05fd0d..6ea760e 100644
+--- a/node_modules/react-native-gifted-charts/dist/Components/BarAndLineChartsWrapper/renderHorizSections.js
++++ b/node_modules/react-native-gifted-charts/dist/Components/BarAndLineChartsWrapper/renderHorizSections.js
+@@ -254,7 +254,8 @@ export var renderHorizSections = function (props) {
+         (isLineChart ? 70 : 40);
+     return (_jsx(_Fragment, { children: onlyReferenceLines ? (_jsx(View, { style: {
+                 flexDirection: 'row',
+-            }, children: _jsx(View, { style: { width: (width !== null && width !== void 0 ? width : totalWidth) + endSpacing }, children: referenceLines() }) })) : (_jsxs(View, { pointerEvents: "none", style: {
++            }, children: _jsx(View, { style: { width: (width !== null && width !== void 0 ? width : totalWidth) + endSpacing }, children: referenceLines() }) })) : (_jsxs(View, { style: {
++                pointerEvents: 'none',
+                 flexDirection: 'row',
+                 marginTop: stepHeight / -2,
+                 position: onlyLabels ? 'absolute' : 'relative',
+diff --git a/node_modules/react-native-gifted-charts/dist/Components/common/StripAndLabel.js b/node_modules/react-native-gifted-charts/dist/Components/common/StripAndLabel.js
+index fa54a00..405bef5 100644
+--- a/node_modules/react-native-gifted-charts/dist/Components/common/StripAndLabel.js
++++ b/node_modules/react-native-gifted-charts/dist/Components/common/StripAndLabel.js
+@@ -35,7 +35,8 @@ export var StripAndLabel = function (props) {
+                                     ? pointerConfig === null || pointerConfig === void 0 ? void 0 : pointerConfig.strokeDashArray
+                                     : '', x1: 0, y1: pointerYLocal - 7, x2: horizontalStripConfig.horizontalStripUptoDataPoint
+                                     ? pointerX + 2
+-                                    : screenWidth, y2: pointerYLocal - 7 }))] }), (horizontalStripConfig === null || horizontalStripConfig === void 0 ? void 0 : horizontalStripConfig.labelComponent) ? (_jsx(View, { pointerEvents: pointerEvents !== null && pointerEvents !== void 0 ? pointerEvents : 'none', style: [
++                                    : screenWidth, y2: pointerYLocal - 7 }))] }), (horizontalStripConfig === null || horizontalStripConfig === void 0 ? void 0 : horizontalStripConfig.labelComponent) ? (_jsx(View, { style: [
++                            { pointerEvents: pointerEvents !== null && pointerEvents !== void 0 ? pointerEvents : 'none' },
+                             {
+                                 position: 'absolute',
+                                 left: 0,
+@@ -46,7 +47,8 @@ export var StripAndLabel = function (props) {
+                             },
+                         ], children: (_h = horizontalStripConfig === null || horizontalStripConfig === void 0 ? void 0 : horizontalStripConfig.labelComponent) === null || _h === void 0 ? void 0 : _h.call(horizontalStripConfig, hasDataSet ? pointerItemsForSet : pointerItemLocal, hasDataSet
+                             ? secondaryPointerItemsForSet
+-                            : [secondaryPointerItem], pointerIndex) })) : null] })) : null, pointerLabelComponent ? (_jsx(View, { pointerEvents: pointerEvents !== null && pointerEvents !== void 0 ? pointerEvents : 'none', style: [
++                            : [secondaryPointerItem], pointerIndex) })) : null] })) : null, pointerLabelComponent ? (_jsx(View, { style: [
++                            { pointerEvents: pointerEvents !== null && pointerEvents !== void 0 ? pointerEvents : 'none' },
+                     {
+                         position: 'absolute',
+                         left: left + pointerX,
+diff --git a/node_modules/react-native-gifted-charts/dist/LineChart/index.js b/node_modules/react-native-gifted-charts/dist/LineChart/index.js
+index 149e33e..5d31c2f 100644
+--- a/node_modules/react-native-gifted-charts/dist/LineChart/index.js
++++ b/node_modules/react-native-gifted-charts/dist/LineChart/index.js
+@@ -1099,7 +1099,8 @@ export var LineChart = function (props) {
+                     : null, intersectionAreaConfig &&
+                     (props.areaChart || (props.areaChart1 && props.areaChart2))
+                     ? renderIntersection()
+-                    : null, pointerX > 0 ? (_jsxs(View, { pointerEvents: pointerEvents !== null && pointerEvents !== void 0 ? pointerEvents : 'none', style: {
++                    : null, pointerX > 0 ? (_jsxs(View, { style: {
++                        pointerEvents: pointerEvents !== null && pointerEvents !== void 0 ? pointerEvents : 'none',
+                         position: 'absolute',
+                         height: extendedContainerHeight + noOfSectionsBelowXAxis * stepHeight,
+                         bottom: 58 + labelsExtraHeight + xAxisLabelsVerticalShift - overflowTop,

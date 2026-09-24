@@ -17,6 +17,9 @@ export async function userFromToken(ctx: QueryCtx, token: string) {
   return user;
 }
 
+/** For queries: a missing session yields null instead of throwing into the client's render. */
+export const maybeUser = (ctx: QueryCtx, token: string) => userFromToken(ctx, token).catch(() => null);
+
 export const login = mutation({
   args: {
     email: v.string(),
@@ -52,7 +55,7 @@ export const logout = mutation({
 export const me = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    const u = await userFromToken(ctx, token).catch(() => null);
+    const u = await maybeUser(ctx, token);
     return u && { id: u._id, name: u.name, email: u.email, role: u.role };
   },
 });

@@ -3,7 +3,7 @@ import { router } from "expo-router";
 import { Alert, FlatList, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { EmptyState } from "@/components/EmptyState";
 import { SwipeableRow } from "@/components/SwipeableRow";
-import { money, productById } from "@/lib";
+import { money, productById, useInventory } from "@/lib";
 import { useStore } from "@/store";
 import { colors, shadow } from "@/theme";
 
@@ -13,6 +13,7 @@ export default function Cart() {
   const cart = useStore((s) => s.cart);
   const setQty = useStore((s) => s.setQty);
   const clearCart = useStore((s) => s.clearCart);
+  const inventory = useInventory();
   const items = Object.entries(cart).flatMap(([id, qty]) => {
     const p = productById.get(id);
     return p ? [{ p, qty }] : [];
@@ -28,6 +29,14 @@ export default function Cart() {
       />
     );
 
+  // Stock can change live while items sit in the cart.
+  const problem = (id: string, qty: number) => {
+    const inv = inventory?.get(id);
+    if (!inv) return null;
+    if (!inv.inStock || inv.stock === 0) return "Out of stock";
+    return qty > inv.stock ? `Only ${inv.stock} left` : null;
+  };
+  const blocked = items.some(({ p, qty }) => problem(p.id, qty));
   const subtotal = items.reduce((a, { p, qty }) => a + p.price * qty, 0);
   const shipping = subtotal >= SHIPPING_FREE_OVER ? 0 : 6.99;
 
@@ -52,14 +61,20 @@ export default function Cart() {
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={s.name} numberOfLines={2}>{p.name}</Text>
                 <Text style={s.price}>{money(p.price)}</Text>
+                {problem(p.id, qty) && <Text style={s.problem}>{problem(p.id, qty)}</Text>}
               </View>
               <View style={s.qty}>
                 <Pressable style={s.qtyBtn} onPress={() => setQty(p.id, qty - 1)} accessibilityLabel="Decrease quantity">
                   <Ionicons name={qty === 1 ? "trash-outline" : "remove"} size={16} color={colors.text} />
                 </Pressable>
                 <Text style={s.qtyText}>{qty}</Text>
-                <Pressable style={s.qtyBtn} onPress={() => setQty(p.id, qty + 1)} accessibilityLabel="Increase quantity">
-                  <Ionicons name="add" size={16} color={colors.text} />
+                <Pressable
+                  style={s.qtyBtn}
+                  onPress={() => setQty(p.id, qty + 1)}
+                  disabled={qty >= (inventory?.get(p.id)?.stock ?? Infinity)}
+                  accessibilityLabel="Increase quantity"
+                >
+                  <Ionicons name="add" size={16} color={qty >= (inventory?.get(p.id)?.stock ?? Infinity) ? colors.border : colors.text} />
                 </Pressable>
               </View>
             </View>
@@ -70,8 +85,8 @@ export default function Cart() {
         <Line label="Subtotal" value={money(subtotal)} />
         <Line label="Shipping" value={shipping ? money(shipping) : "Free"} />
         <Line label="Total" value={money(subtotal + shipping)} bold />
-        <Pressable style={s.btn} onPress={checkout}>
-          <Text style={s.btnText}>Checkout</Text>
+        <Pressable style={[s.btn, blocked && { backgroundColor: colors.border }]} onPress={checkout} disabled={blocked}>
+          <Text style={s.btnText}>{blocked ? "Fix unavailable items" : "Checkout"}</Text>
         </Pressable>
       </View>
     </View>
@@ -97,6 +112,7 @@ const s = StyleSheet.create({
   img: { width: 64, height: 64, borderRadius: 12, backgroundColor: colors.border },
   name: { fontSize: 14, fontWeight: "600", color: colors.text },
   price: { fontSize: 15, fontWeight: "800", color: colors.primary },
+  problem: { fontSize: 12, fontWeight: "700", color: colors.danger },
   qty: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.bg, borderRadius: 10, padding: 4 },
   qtyBtn: { width: 28, height: 28, borderRadius: 8, backgroundColor: colors.card, alignItems: "center", justifyContent: "center" },
   qtyText: { minWidth: 18, textAlign: "center", fontWeight: "700", color: colors.text },

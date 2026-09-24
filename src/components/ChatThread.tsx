@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
+import { ConvexError } from "convex/values";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { useState } from "react";
 import {
-  ActivityIndicator, FlatList, KeyboardAvoidingView, Pressable, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Pressable, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { api } from "../../convex/_generated/api";
@@ -20,18 +21,22 @@ const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: "2-digit"
  * Inverted list = newest at the bottom and auto-pinned there as messages arrive.
  */
 export function ChatThread({ customerId }: { customerId?: Id<"users"> }) {
-  const session = useStore((s) => s.session)!;
+  const session = useStore((s) => s.session);
   const headerHeight = useHeaderHeight();
-  const messages = useQuery(api.chat.list, { token: session.token, customerId });
+  const messages = useQuery(api.chat.list, session ? { token: session.token, customerId } : "skip");
   const send = useMutation(api.chat.send);
   const [text, setText] = useState("");
+  if (!session) return null; // signing out: the role guard is about to unmount this screen
   const accent = session.user.role === "supplier" ? colors.supplier : colors.primary;
 
   const onSend = () => {
     const body = text.trim();
     if (!body) return;
     setText("");
-    send({ token: session.token, body, customerId }).catch(() => setText(body));
+    send({ token: session.token, body, customerId }).catch((e) => {
+      setText((t) => t || body); // restore the draft unless the user already typed something new
+      Alert.alert("Message not sent", e instanceof ConvexError ? String(e.data) : "Check your connection and try again.");
+    });
   };
 
   const renderItem = ({ item }: { item: Doc<"messages"> }) => {

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,6 +19,8 @@ export default function ProductDetail() {
   const inCart = useStore((s) => s.cart[id] ?? 0);
   const insets = useSafeAreaInsets();
   const [justAdded, setJustAdded] = useState(false);
+  const addedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(addedTimer.current), []);
   const btnScale = useSharedValue(1);
   const btnStyle = useAnimatedStyle(() => ({ transform: [{ scale: btnScale.value }] }));
 
@@ -26,13 +28,15 @@ export default function ProductDetail() {
 
   const stock = inventory?.get(p.id);
   const available = stock?.inStock ?? true;
+  const maxedOut = !!stock && inCart >= stock.stock;
 
   const onAdd = () => {
     add(p.id);
     btnScale.set(withSequence(withSpring(0.92, { damping: 8, stiffness: 500 }), withSpring(1)));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 1200);
+    clearTimeout(addedTimer.current);
+    addedTimer.current = setTimeout(() => setJustAdded(false), 1200);
   };
 
   return (
@@ -80,11 +84,11 @@ export default function ProductDetail() {
         <Animated.View style={[{ flex: 1 }, btnStyle]}>
           <Pressable
             onPress={onAdd}
-            disabled={!available}
-            style={[s.btn, { backgroundColor: !available ? colors.border : justAdded ? colors.success : colors.primary }]}
+            disabled={!available || maxedOut}
+            style={[s.btn, { backgroundColor: !available || maxedOut ? colors.border : justAdded ? colors.success : colors.primary }]}
           >
             <Ionicons name={justAdded ? "checkmark" : "bag-add-outline"} size={20} color="#fff" />
-            <Text style={s.btnText}>{!available ? "Unavailable" : justAdded ? "Added!" : "Add to Cart"}</Text>
+            <Text style={s.btnText}>{!available ? "Unavailable" : justAdded ? "Added!" : maxedOut ? "Max in cart" : "Add to Cart"}</Text>
           </Pressable>
         </Animated.View>
       </View>

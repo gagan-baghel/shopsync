@@ -12,7 +12,8 @@ import { colors } from "@/theme";
 export function SwipeableRow({ children, onDelete }: { children: ReactNode; onDelete: () => void }) {
   const { width } = useWindowDimensions();
   const x = useSharedValue(0);
-  const height = useSharedValue(-1); // -1 = not measured yet → auto height
+  const height = useSharedValue(0); // last measured height
+  const collapse = useSharedValue(1); // 1 = auto height; animates to 0 on delete
 
   const pan = Gesture.Pan()
     .activeOffsetX([-12, 12])
@@ -23,7 +24,7 @@ export function SwipeableRow({ children, onDelete }: { children: ReactNode; onDe
     .onEnd((e) => {
       if (x.value < -width * 0.35 || e.velocityX < -900) {
         x.value = withTiming(-width, { duration: 180 }, () => {
-          height.value = withTiming(0, { duration: 180 }, (done) => {
+          collapse.value = withTiming(0, { duration: 180 }, (done) => {
             if (done) scheduleOnRN(onDelete);
           });
         });
@@ -34,7 +35,7 @@ export function SwipeableRow({ children, onDelete }: { children: ReactNode; onDe
 
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   const wrapStyle = useAnimatedStyle(() =>
-    height.value < 0 ? {} : { height: height.value, opacity: height.value === 0 ? 0 : 1 },
+    collapse.value === 1 ? {} : { height: height.value * collapse.value, opacity: collapse.value > 0 ? 1 : 0 },
   );
   const bgStyle = useAnimatedStyle(() => ({
     opacity: interpolate(x.value, [0, -60], [0, 1], "clamp"),
@@ -47,7 +48,7 @@ export function SwipeableRow({ children, onDelete }: { children: ReactNode; onDe
     <Animated.View
       style={[s.wrap, wrapStyle]}
       onLayout={(e) => {
-        if (height.get() < 0) height.set(e.nativeEvent.layout.height);
+        if (collapse.get() === 1) height.set(e.nativeEvent.layout.height); // track text-size / width changes
       }}
     >
       <Animated.View style={[s.bg, bgStyle]}>

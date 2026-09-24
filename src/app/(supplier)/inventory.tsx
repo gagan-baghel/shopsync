@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { useMutation } from "convex/react";
+import { ConvexError } from "convex/values";
 import { useState } from "react";
 import {
-  ActivityIndicator, Image, KeyboardAvoidingView, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View,
+  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "../../../convex/_generated/api";
@@ -14,7 +15,7 @@ import { colors, shadow } from "@/theme";
 const LOW = 15;
 
 export default function Inventory() {
-  const token = useStore((s) => s.session!.token);
+  const token = useStore((s) => s.session?.token ?? "");
   const inventory = useInventory();
   const update = useMutation(api.inventory.update).withOptimisticUpdate((store, args) => {
     const rows = store.getQuery(api.inventory.list, {});
@@ -34,6 +35,11 @@ export default function Inventory() {
     );
   });
   const [editing, setEditing] = useState<Product | null>(null);
+  const save = (args: { productId: string; stock?: number; inStock?: boolean }) => {
+    update({ token, ...args }).catch((e) =>
+      Alert.alert("Update failed", e instanceof ConvexError ? String(e.data) : "Check your connection and try again."),
+    );
+  };
 
   if (!inventory) return <ActivityIndicator style={{ flex: 1 }} color={colors.supplier} />;
 
@@ -68,7 +74,7 @@ export default function Inventory() {
               </View>
               <Switch
                 value={on}
-                onValueChange={(v) => { update({ token, productId: p.id, inStock: v }); }}
+                onValueChange={(v) => save({ productId: p.id, inStock: v })}
                 trackColor={{ true: colors.supplier, false: colors.border }}
                 thumbColor="#fff"
                 accessibilityLabel={`${p.name} in stock`}
@@ -83,7 +89,7 @@ export default function Inventory() {
         current={editing ? (inventory.get(editing.id)?.stock ?? 0) : 0}
         onClose={() => setEditing(null)}
         onSave={(stock) => {
-          if (editing) update({ token, productId: editing.id, stock });
+          if (editing) save({ productId: editing.id, stock });
           setEditing(null);
         }}
       />

@@ -22,7 +22,7 @@ The login screen has a role selector (Customer/Supplier cards), email, password 
   - Cart with +/- quantity and **swipe-left-to-delete** (Gesture Handler Pan + Reanimated, running on the UI thread). Empty cart has its own state.
   - Support chat.
 - **Supplier**
-  - Analytics: KPI tiles, revenue trend with a line/bar toggle and touch tooltip, and a category donut (react-native-gifted-charts).
+  - Analytics: KPI tiles, revenue trend with a line/bar toggle and touch tooltip (react-native-gifted-charts), and a category donut drawn with react-native-svg.
   - Inventory: live in-stock switches and a bottom-sheet stock editor. Changes are written to Convex, so customers see stock updates instantly.
   - Inbox of customer threads leading to each chat.
 - **Chat**
@@ -43,10 +43,11 @@ src/app/           expo-router routes
   (supplier)/        dashboard, inventory, inbox tabs
   product/[id].tsx   product detail
   chat/[customerId]  supplier ↔ customer thread
-src/components/    ChatThread, SwipeableRow, CartBadge, EmptyState, HeaderActions
+src/components/    ChatThread, SwipeableRow, CartBadge, Donut, EmptyState, HeaderActions
 src/data/          products.json, analytics.ts (static data)
 src/store.ts       zustand + AsyncStorage (session, cart)
 src/lib.ts         catalog helpers, debounce, live inventory hook
+patches/           small web fix for react-native-gifted-charts (applied on postinstall)
 ```
 
 Role gating uses `Stack.Protected`: once the session is set or cleared, the router moves to the right area by itself.

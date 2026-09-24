@@ -9,8 +9,10 @@ import { categories, money, Product, products, useDebounced, useInventory } from
 import { useStore } from "@/store";
 import { colors, shadow } from "@/theme";
 
-const ProductCard = memo(function ProductCard({ p, available }: { p: Product; available: boolean }) {
+const ProductCard = memo(function ProductCard({ p, available, stock }: { p: Product; available: boolean; stock?: number }) {
   const add = useStore((s) => s.addToCart);
+  const inCart = useStore((s) => s.cart[p.id] ?? 0);
+  const canAdd = available && (stock === undefined || inCart < stock);
   return (
     <Pressable style={s.card} onPress={() => router.push(`/product/${p.id}`)}>
       <View>
@@ -30,12 +32,12 @@ const ProductCard = memo(function ProductCard({ p, available }: { p: Product; av
             <Text style={s.rating}>★ {p.rating}</Text>
           </View>
           <Pressable
-            disabled={!available}
+            disabled={!canAdd}
             onPress={() => {
               add(p.id);
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
             }}
-            style={[s.add, !available && { backgroundColor: colors.border }]}
+            style={[s.add, !canAdd && { backgroundColor: colors.border }]}
             hitSlop={6}
             accessibilityLabel={`Add ${p.name} to cart`}
           >
@@ -101,7 +103,7 @@ export default function Shop() {
         contentContainerStyle={s.list}
         keyboardDismissMode="on-drag"
         renderItem={({ item }) => (
-          <ProductCard p={item} available={inventory?.get(item.id)?.inStock ?? true} />
+          <ProductCard p={item} available={inventory?.get(item.id)?.inStock ?? true} stock={inventory?.get(item.id)?.stock} />
         )}
         ListEmptyComponent={
           <EmptyState

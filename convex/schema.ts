@@ -7,7 +7,9 @@ export default defineSchema({
     name: v.string(),
     role: v.union(v.literal("customer"), v.literal("supplier")),
     passwordHash: v.string(),
-  }).index("by_email", ["email"]),
+  })
+    .index("by_email", ["email"])
+    .index("by_role", ["role"]),
 
   sessions: defineTable({
     userId: v.id("users"),

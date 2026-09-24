@@ -8,7 +8,7 @@ import { useStore } from "@/store";
 import { colors, shadow } from "@/theme";
 
 export default function Inbox() {
-  const token = useStore((s) => s.session!.token);
+  const token = useStore((s) => s.session?.token ?? "");
   const threads = useQuery(api.chat.threads, { token });
 
   if (!threads) return <ActivityIndicator style={{ flex: 1 }} color={colors.supplier} />;

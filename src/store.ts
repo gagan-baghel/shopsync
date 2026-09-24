@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -40,8 +40,9 @@ export const useStore = create<State>()(
 export const useCartCount = () =>
   useStore((s) => Object.values(s.cart).reduce((a, b) => a + b, 0));
 
-export function useHydrated() {
-  const [hydrated, setHydrated] = useState(useStore.persist.hasHydrated());
-  useEffect(() => useStore.persist.onFinishHydration(() => setHydrated(true)), []);
-  return hydrated;
-}
+/** True once AsyncStorage has been read; subscribes without a gap, so the event can't be missed. */
+export const useHydrated = () =>
+  useSyncExternalStore(
+    (onChange) => useStore.persist.onFinishHydration(onChange),
+    () => useStore.persist.hasHydrated(),
+  );

@@ -24,6 +24,7 @@ export const update = mutation({
     if (!row) throw new ConvexError("Unknown product");
     const patch: { stock?: number; inStock?: boolean } = {};
     if (stock !== undefined) {
+      if (!Number.isFinite(stock)) throw new ConvexError("Invalid stock");
       patch.stock = Math.max(0, Math.min(99999, Math.round(stock)));
       if (patch.stock === 0) patch.inStock = false;
       else if (row.stock === 0) patch.inStock = true; // restocked

@@ -13,10 +13,4 @@ export const colors = {
   warning: "#F59E0B",
 };
 
-export const shadow = {
-  shadowColor: "#0F172A",
-  shadowOpacity: 0.06,
-  shadowRadius: 10,
-  shadowOffset: { width: 0, height: 4 },
-  elevation: 2,
-};
+export const shadow = { boxShadow: "0px 4px 10px rgba(15, 23, 42, 0.06)" };

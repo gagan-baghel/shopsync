@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { BarChart, LineChart, PieChart } from "react-native-gifted-charts";
+import { BarChart, LineChart } from "react-native-gifted-charts";
+import { Donut } from "@/components/Donut";
 import { categoryShare, kpis, monthlyRevenue } from "@/data/analytics";
 import { colors, shadow } from "@/theme";
 
@@ -12,6 +13,7 @@ export default function Dashboard() {
   const [mode, setMode] = useState<"line" | "bar">("line");
   const chartWidth = Math.min(width, 640) - 32 - 32 - 40; // screen - page padding - card padding - y-axis
   const spacing = (chartWidth - 24) / (monthlyRevenue.length - 1);
+  const barSlot = (chartWidth - 20) / monthlyRevenue.length;
   const top = [...categoryShare].sort((a, b) => b.value - a.value)[0];
 
   return (
@@ -35,7 +37,14 @@ export default function Dashboard() {
           </View>
           <View style={s.seg}>
             {(["line", "bar"] as const).map((m) => (
-              <Pressable key={m} onPress={() => setMode(m)} style={[s.segBtn, mode === m && s.segActive]}>
+              <Pressable
+                key={m}
+                onPress={() => setMode(m)}
+                style={[s.segBtn, mode === m && s.segActive]}
+                accessibilityRole="button"
+                accessibilityLabel={m === "line" ? "Show line chart" : "Show bar chart"}
+                accessibilityState={{ selected: mode === m }}
+              >
                 <Ionicons
                   name={m === "line" ? "analytics-outline" : "bar-chart-outline"}
                   size={16}
@@ -64,9 +73,8 @@ export default function Dashboard() {
             endFillColor={colors.supplier}
             startOpacity={0.3}
             endOpacity={0.02}
-            hideDataPoints={false}
-            dataPointsColor={colors.supplier}
-            dataPointsRadius={3}
+            // Built-in dots attach press handlers that leak responder props on web; the pointer marks the active point instead.
+            hideDataPoints
             noOfSections={4}
             maxValue={48000}
             yAxisLabelWidth={40}
@@ -102,9 +110,10 @@ export default function Dashboard() {
             }))}
             width={chartWidth}
             height={200}
-            barWidth={Math.max(8, spacing * 0.55)}
-            spacing={spacing * 0.45}
-            initialSpacing={6}
+            barWidth={barSlot * 0.6}
+            spacing={barSlot * 0.4}
+            initialSpacing={8}
+            endSpacing={0}
             barBorderTopLeftRadius={4}
             barBorderTopRightRadius={4}
             noOfSections={4}
@@ -125,20 +134,10 @@ export default function Dashboard() {
         <Text style={s.h2}>Sales by category</Text>
         <Text style={s.muted}>Share of revenue</Text>
         <View style={s.pieRow}>
-          <PieChart
-            donut
-            isAnimated
-            data={categoryShare.map((c) => ({ value: c.value, color: c.color }))}
-            radius={78}
-            innerRadius={52}
-            innerCircleColor={colors.card}
-            centerLabelComponent={() => (
-              <View style={{ alignItems: "center" }}>
-                <Text style={s.centerValue}>{top.value}%</Text>
-                <Text style={s.centerLabel}>{top.label}</Text>
-              </View>
-            )}
-          />
+          <Donut data={categoryShare}>
+            <Text style={s.centerValue}>{top.value}%</Text>
+            <Text style={s.centerLabel}>{top.label}</Text>
+          </Donut>
           <View style={s.legend}>
             {categoryShare.map((c) => (
               <View key={c.label} style={s.legendRow}>

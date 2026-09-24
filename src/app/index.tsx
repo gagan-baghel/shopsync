@@ -3,7 +3,7 @@ import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import { useState } from "react";
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "../../convex/_generated/api";
@@ -40,6 +40,7 @@ export default function Login() {
   };
 
   const onSubmit = async () => {
+    if (loading) return; // keyboard "go" bypasses the button's disabled state
     if (!email.trim() || !password) return setError("Enter your email and password.");
     setLoading(true);
     setError(null);
@@ -54,7 +55,7 @@ export default function Login() {
 
   return (
     <SafeAreaView style={s.safe}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
           <View style={[s.logo, { backgroundColor: accent }]}>
             <Ionicons name="cube" size={32} color="#fff" />
