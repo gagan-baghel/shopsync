@@ -4,11 +4,14 @@ import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import { useState } from "react";
 import {
-  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "../../../convex/_generated/api";
-import { Product, products, useInventory } from "@/lib";
+import { router } from "expo-router";
+import { AddProductSheet } from "@/components/AddProductSheet";
+import { ProductImage } from "@/components/ProductImage";
+import { Product, useInventory, useProducts } from "@/lib";
 import { useStore } from "@/store";
 import { colors, shadow } from "@/theme";
 
@@ -17,6 +20,8 @@ const LOW = 15;
 export default function Inventory() {
   const token = useStore((s) => s.session?.token ?? "");
   const inventory = useInventory();
+  const products = useProducts();
+  const [adding, setAdding] = useState(false);
   const update = useMutation(api.inventory.update).withOptimisticUpdate((store, args) => {
     const rows = store.getQuery(api.inventory.list, {});
     if (!rows) return;
@@ -54,8 +59,16 @@ export default function Inventory() {
         <Stat label="Out of stock" value={rows.length - inStock} color={colors.danger} />
         <Stat label="Low stock" value={low} color={colors.warning} />
       </View>
+      <View style={s.bar}>
+        <Text style={s.barText}>{products.list.length} products · tap one for details</Text>
+        <Pressable style={s.addBtn} onPress={() => setAdding(true)} accessibilityRole="button" accessibilityLabel="Add product">
+          <Ionicons name="add" size={18} color="#fff" />
+          <Text style={s.addText}>Add product</Text>
+        </Pressable>
+      </View>
       <FlashList
-        data={products}
+        data={products.list}
+        maintainVisibleContentPosition={{ disabled: true }} // new products are prepended; show them, don't anchor
         keyExtractor={(p) => p.id}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         extraData={inventory}
@@ -64,14 +77,17 @@ export default function Inventory() {
           const stock = inv?.stock ?? 0;
           const on = inv?.inStock ?? false;
           return (
-            <Pressable style={s.row} onPress={() => setEditing(p)}>
-              <Image source={{ uri: p.image }} style={s.img} />
+            <Pressable style={s.row} onPress={() => router.push(`/product/${p.id}`)} accessibilityLabel={`View ${p.name}`}>
+              <ProductImage uri={p.image} style={s.img} />
               <View style={{ flex: 1 }}>
                 <Text style={s.name} numberOfLines={1}>{p.name}</Text>
                 <Text style={[s.count, stock < LOW && { color: stock === 0 ? colors.danger : colors.warning }]}>
-                  {stock} units · <Text style={s.edit}>Edit</Text>
+                  {stock} units
                 </Text>
               </View>
+              <Pressable onPress={() => setEditing(p)} hitSlop={8} style={s.editBtn} accessibilityLabel={`Edit stock for ${p.name}`}>
+                <Text style={s.edit}>Edit</Text>
+              </Pressable>
               <Switch
                 value={on}
                 onValueChange={(v) => save({ productId: p.id, inStock: v })}
@@ -83,6 +99,7 @@ export default function Inventory() {
           );
         }}
       />
+      <AddProductSheet visible={adding} onClose={() => setAdding(false)} />
       <StockSheet
         key={editing?.id ?? "closed"} // remount per product so the input starts at its current stock
         product={editing}
@@ -180,6 +197,14 @@ const s = StyleSheet.create({
   name: { fontSize: 14, fontWeight: "600", color: colors.text },
   count: { fontSize: 13, color: colors.muted, marginTop: 2 },
   edit: { color: colors.supplier, fontWeight: "700" },
+  editBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.supplierSoft },
+  bar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 10 },
+  barText: { color: colors.muted, fontSize: 12, fontWeight: "600", flexShrink: 1 },
+  addBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.supplier,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+  },
+  addText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   backdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)" },
   sheet: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, gap: 4 },
   handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: colors.border, alignSelf: "center", marginBottom: 12 },

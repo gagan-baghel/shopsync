@@ -41,14 +41,18 @@ function RootStack() {
         </Stack.Protected>
         <Stack.Protected guard={role === "customer"}>
           <Stack.Screen name="(customer)" />
-          <Stack.Screen
-            name="product/[id]"
-            options={{ headerShown: true, title: "", headerBackButtonDisplayMode: "minimal" }}
-          />
         </Stack.Protected>
         <Stack.Protected guard={role === "supplier"}>
           <Stack.Screen name="(supplier)" />
           <Stack.Screen name="chat/[customerId]" options={{ headerShown: true, title: "Chat" }} />
+        </Stack.Protected>
+        {/* Must stay after the role groups: after login the router lands on the first allowed screen. */}
+        <Stack.Protected guard={!!session}>
+          {/* Shared by both roles: customers shop from it, suppliers review listings. */}
+          <Stack.Screen
+            name="product/[id]"
+            options={{ headerShown: true, title: "", headerBackButtonDisplayMode: "minimal" }}
+          />
         </Stack.Protected>
       </Stack>
     </>

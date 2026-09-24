@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Alert, FlatList, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { EmptyState } from "@/components/EmptyState";
 import { SwipeableRow } from "@/components/SwipeableRow";
-import { money, productById, useInventory } from "@/lib";
+import { ProductImage } from "@/components/ProductImage";
+import { money, useInventory, useProducts } from "@/lib";
 import { useStore } from "@/store";
 import { colors, shadow } from "@/theme";
 
@@ -14,11 +15,13 @@ export default function Cart() {
   const setQty = useStore((s) => s.setQty);
   const clearCart = useStore((s) => s.clearCart);
   const inventory = useInventory();
+  const products = useProducts();
   const items = Object.entries(cart).flatMap(([id, qty]) => {
-    const p = productById.get(id);
+    const p = products.byId.get(id);
     return p ? [{ p, qty }] : [];
   });
 
+  if (products.loading && items.length < Object.keys(cart).length) return <ActivityIndicator style={s.flex} color={colors.primary} />;
   if (!items.length)
     return (
       <EmptyState
@@ -57,7 +60,7 @@ export default function Cart() {
         renderItem={({ item: { p, qty } }) => (
           <SwipeableRow onDelete={() => setQty(p.id, 0)}>
             <View style={s.row}>
-              <Image source={{ uri: p.image }} style={s.img} />
+              <ProductImage uri={p.image} style={s.img} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={s.name} numberOfLines={2}>{p.name}</Text>
                 <Text style={s.price}>{money(p.price)}</Text>

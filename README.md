@@ -24,6 +24,8 @@ The login screen has a role selector (Customer/Supplier cards), email, password 
 - **Supplier**
   - Analytics: KPI tiles, revenue trend with a line/bar toggle and touch tooltip (react-native-gifted-charts), and a category donut drawn with react-native-svg.
   - Inventory: live in-stock switches and a bottom-sheet stock editor. Changes are written to Convex, so customers see stock updates instantly.
+  - Add product: bottom-sheet form (name, price, stock, category, optional image URL and description), validated on the server. New products appear instantly in every customer's catalog.
+  - Tap any inventory row to open the full product page with specs and live units in stock.
   - Inbox of customer threads leading to each chat.
 - **Chat**
   - Convex reactive query plus mutation.
@@ -36,14 +38,14 @@ The login screen has a role selector (Customer/Supplier cards), email, password 
 ## Structure
 
 ```
-convex/            backend: schema, auth (sessions), chat, inventory, seed
+convex/            backend: schema, auth (sessions), chat, inventory, products, seed
 src/app/           expo-router routes
   index.tsx          login / role switcher
   (customer)/        shop, cart, support tabs
   (supplier)/        dashboard, inventory, inbox tabs
-  product/[id].tsx   product detail
+  product/[id].tsx   product detail (shared by both roles)
   chat/[customerId]  supplier ↔ customer thread
-src/components/    ChatThread, SwipeableRow, CartBadge, Donut, EmptyState, HeaderActions
+src/components/    ChatThread, SwipeableRow, CartBadge, Donut, AddProductSheet, ProductImage, EmptyState, HeaderActions
 src/data/          products.json, analytics.ts (static data)
 src/store.ts       zustand + AsyncStorage (session, cart)
 src/lib.ts         catalog helpers, debounce, live inventory hook

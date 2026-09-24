@@ -2,18 +2,21 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CartBadge } from "@/components/CartBadge";
 import { EmptyState } from "@/components/EmptyState";
-import { money, productById, useInventory } from "@/lib";
+import { ProductImage } from "@/components/ProductImage";
+import { money, useInventory, useProducts } from "@/lib";
 import { useStore } from "@/store";
 import { colors } from "@/theme";
 
 export default function ProductDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const p = productById.get(id);
+  const products = useProducts();
+  const p = products.byId.get(id);
+  const supplier = useStore((s) => s.session?.user.role === "supplier");
   const inventory = useInventory();
   const add = useStore((s) => s.addToCart);
   const inCart = useStore((s) => s.cart[id] ?? 0);
@@ -24,6 +27,7 @@ export default function ProductDetail() {
   const btnScale = useSharedValue(1);
   const btnStyle = useAnimatedStyle(() => ({ transform: [{ scale: btnScale.value }] }));
 
+  if (!p && products.loading) return <ActivityIndicator style={s.flex} color={colors.primary} />;
   if (!p) return <EmptyState icon="alert-circle-outline" title="Product not found" action={{ label: "Go back", onPress: router.back }} />;
 
   const stock = inventory?.get(p.id);
@@ -44,7 +48,8 @@ export default function ProductDetail() {
       <Stack.Screen
         options={{
           title: p.name,
-          headerRight: () => (
+          headerRight: () =>
+            supplier ? null : (
             <Pressable onPress={() => router.navigate("/cart")} hitSlop={10} accessibilityLabel="Open cart" style={{ marginRight: 8 }}>
               <CartBadge />
             </Pressable>
@@ -52,7 +57,7 @@ export default function ProductDetail() {
         }}
       />
       <ScrollView contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
-        <Image source={{ uri: p.image }} style={s.img} />
+        <ProductImage uri={p.image} style={s.img} />
         <View style={s.body}>
           <Text style={s.cat}>{p.category}</Text>
           <Text style={s.name}>{p.name}</Text>
@@ -64,21 +69,24 @@ export default function ProductDetail() {
               </Text>
             </View>
           </View>
-          <Text style={s.rating}>★ {p.rating} rating</Text>
-          <Text style={s.desc}>{p.description}</Text>
+          <Text style={s.rating}>{p.rating ? `★ ${p.rating} rating` : "New arrival"}</Text>
+          {!!p.description && <Text style={s.desc}>{p.description}</Text>}
 
           <Text style={s.h2}>Specifications</Text>
           <View style={s.specs}>
-            {Object.entries(p.specs).map(([k, v], i) => (
-              <View key={k} style={[s.specRow, i > 0 && s.specBorder]}>
-                <Text style={s.specKey}>{k}</Text>
-                <Text style={s.specVal}>{v}</Text>
-              </View>
-            ))}
+            {Object.entries({ Category: p.category, ...p.specs, ...(supplier && stock ? { "Units in stock": String(stock.stock) } : {}) }).map(
+              ([k, v], i) => (
+                <View key={k} style={[s.specRow, i > 0 && s.specBorder]}>
+                  <Text style={s.specKey}>{k}</Text>
+                  <Text style={s.specVal}>{v}</Text>
+                </View>
+              ),
+            )}
           </View>
         </View>
       </ScrollView>
 
+      {!supplier && (
       <View style={[s.footer, { paddingBottom: 12 + insets.bottom }]}>
         {inCart > 0 && <Text style={s.inCart}>{inCart} in cart</Text>}
         <Animated.View style={[{ flex: 1 }, btnStyle]}>
@@ -92,6 +100,7 @@ export default function ProductDetail() {
           </Pressable>
         </Animated.View>
       </View>
+      )}
     </View>
   );
 }

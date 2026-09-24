@@ -24,6 +24,16 @@ export default defineSchema({
     body: v.string(),
   }).index("by_customer", ["customerId"]),
 
+  // Products added by suppliers at runtime (the base catalog ships as static JSON in the app).
+  products: defineTable({
+    name: v.string(),
+    category: v.string(),
+    price: v.number(),
+    description: v.string(),
+    image: v.optional(v.string()),
+    createdBy: v.id("users"),
+  }),
+
   inventory: defineTable({
     productId: v.string(),
     stock: v.number(),

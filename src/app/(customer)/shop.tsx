@@ -3,9 +3,10 @@ import { FlashList } from "@shopify/flash-list";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { memo, useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { EmptyState } from "@/components/EmptyState";
-import { categories, money, Product, products, useDebounced, useInventory } from "@/lib";
+import { ProductImage } from "@/components/ProductImage";
+import { categories, money, Product, useDebounced, useInventory, useProducts } from "@/lib";
 import { useStore } from "@/store";
 import { colors, shadow } from "@/theme";
 
@@ -16,7 +17,7 @@ const ProductCard = memo(function ProductCard({ p, available, stock }: { p: Prod
   return (
     <Pressable style={s.card} onPress={() => router.push(`/product/${p.id}`)}>
       <View>
-        <Image source={{ uri: p.image }} style={s.img} />
+        <ProductImage uri={p.image} style={s.img} />
         {!available && (
           <View style={s.oos}>
             <Text style={s.oosText}>Out of stock</Text>
@@ -29,7 +30,7 @@ const ProductCard = memo(function ProductCard({ p, available, stock }: { p: Prod
         <View style={s.bottom}>
           <View>
             <Text style={s.price}>{money(p.price)}</Text>
-            <Text style={s.rating}>★ {p.rating}</Text>
+            <Text style={s.rating}>{p.rating ? `★ ${p.rating}` : "New"}</Text>
           </View>
           <Pressable
             disabled={!canAdd}
@@ -54,15 +55,16 @@ export default function Shop() {
   const [category, setCategory] = useState<string | null>(null);
   const q = useDebounced(query.trim().toLowerCase(), 300);
   const inventory = useInventory();
+  const products = useProducts();
 
   const data = useMemo(
     () =>
-      products.filter(
+      products.list.filter(
         (p) =>
           (!category || p.category === category) &&
           (!q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)),
       ),
-    [q, category],
+    [q, category, products],
   );
 
   return (
@@ -98,6 +100,7 @@ export default function Shop() {
       </View>
       <FlashList
         data={data}
+        maintainVisibleContentPosition={{ disabled: true }} // new products are prepended; show them, don't anchor
         numColumns={2}
         keyExtractor={(p) => p.id}
         contentContainerStyle={s.list}
