@@ -37,6 +37,14 @@ export default defineSchema({
     createdBy: v.optional(v.id("users")),
   }).index("by_key", ["key"]),
 
+  orders: defineTable({
+    customerId: v.id("users"),
+    items: v.array(v.object({ productId: v.string(), name: v.string(), price: v.number(), qty: v.number() })),
+    subtotal: v.number(),
+    shipping: v.number(),
+    total: v.number(),
+  }),
+
   inventory: defineTable({
     productId: v.string(),
     stock: v.number(),

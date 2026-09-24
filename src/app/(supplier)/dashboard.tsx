@@ -1,9 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "convex/react";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { BarChart, LineChart } from "react-native-gifted-charts";
 import { Donut } from "@/components/Donut";
-import { categoryShare, kpis, monthlyRevenue } from "@/data/analytics";
+import { api } from "../../../convex/_generated/api";
+import { baseline, categoryShare, lastYear, monthlyRevenue as staticRevenue } from "@/data/analytics";
+import { money } from "@/lib";
+import { useStore } from "@/store";
 import { colors, shadow } from "@/theme";
 
 const k = (v: number) => `$${(v / 1000).toFixed(0)}k`;
@@ -11,6 +15,27 @@ const k = (v: number) => `$${(v / 1000).toFixed(0)}k`;
 export default function Dashboard() {
   const { width } = useWindowDimensions();
   const [mode, setMode] = useState<"line" | "bar">("line");
+  const token = useStore((s) => s.session?.token ?? "");
+  const live = useQuery(api.orders.summary, { token });
+
+  // Static history + live orders: new purchases raise revenue, order count and this month's point.
+  const liveRevenue = live?.revenue ?? 0;
+  const liveOrders = live?.count ?? 0;
+  const revenue = baseline.revenue + liveRevenue;
+  const orders = baseline.orders + liveOrders;
+  const monthlyRevenue = staticRevenue.map((d, i) => ({ ...d, value: d.value + (live?.byMonth?.[i] ?? 0) }));
+  // Grow the y-axis for big live months (the chart library won't); multiples of 12k keep 4 even sections.
+  const chartMax = Math.ceil(Math.max(48000, ...monthlyRevenue.map((d) => d.value)) / 12000) * 12000;
+  const pct = (now: number, then: number) => {
+    const d = (now / then - 1) * 100;
+    return `${d >= 0 ? "+" : ""}${d.toFixed(1)}%`;
+  };
+  const kpis = [
+    { label: "Revenue (YTD)", value: `$${Math.round(revenue).toLocaleString("en-US")}`, delta: pct(revenue, lastYear.revenue), icon: "cash-outline" },
+    { label: "Orders", value: orders.toLocaleString("en-US"), delta: pct(orders, lastYear.orders), icon: "receipt-outline" },
+    { label: "Avg. order", value: money(revenue / orders), delta: pct(revenue / orders, lastYear.revenue / lastYear.orders), icon: "trending-up-outline" },
+    { label: "Returns", value: "2.4%", delta: "-0.6%", icon: "return-down-back-outline" },
+  ] as const;
   const chartWidth = Math.min(width, 640) - 32 - 32 - 40; // screen - page padding - card padding - y-axis
   const spacing = (chartWidth - 24) / (monthlyRevenue.length - 1);
   const barSlot = (chartWidth - 20) / monthlyRevenue.length;
@@ -24,9 +49,35 @@ export default function Dashboard() {
             <Ionicons name={x.icon} size={18} color={colors.supplier} />
             <Text style={s.kpiValue}>{x.value}</Text>
             <Text style={s.kpiLabel}>{x.label}</Text>
-            <Text style={[s.delta, { color: x.up ? colors.success : colors.danger }]}>{x.delta} vs last yr</Text>
+            <Text style={[s.delta, { color: colors.success }]}>{x.delta} vs last yr</Text>
           </View>
         ))}
+      </View>
+
+      <View style={s.card}>
+        <View style={s.cardHead}>
+          <Text style={s.h2}>Recent orders</Text>
+          <Text style={s.muted}>{liveOrders} live · {money(liveRevenue)}</Text>
+        </View>
+        {!live?.recent.length ? (
+          <Text style={s.muted}>No orders yet. Purchases from the customer app appear here instantly.</Text>
+        ) : (
+          live.recent.map((o) => (
+            <View key={o.id} style={s.orderRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.orderTitle} numberOfLines={1}>
+                  {o.first}
+                  {o.more > 0 ? ` +${o.more} more` : ""}
+                </Text>
+                <Text style={s.muted}>
+                  {o.customer} · {o.units} item{o.units > 1 ? "s" : ""} ·{" "}
+                  {new Date(o.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </Text>
+              </View>
+              <Text style={s.orderTotal}>{money(o.total)}</Text>
+            </View>
+          ))
+        )}
       </View>
 
       <View style={s.card}>
@@ -76,7 +127,7 @@ export default function Dashboard() {
             // Built-in dots attach press handlers that leak responder props on web; the pointer marks the active point instead.
             hideDataPoints
             noOfSections={4}
-            maxValue={48000}
+            maxValue={chartMax}
             yAxisLabelWidth={40}
             formatYLabel={(v) => k(Number(v))}
             yAxisTextStyle={s.axis}
@@ -117,7 +168,7 @@ export default function Dashboard() {
             barBorderTopLeftRadius={4}
             barBorderTopRightRadius={4}
             noOfSections={4}
-            maxValue={48000}
+            maxValue={chartMax}
             yAxisLabelWidth={40}
             formatYLabel={(v) => k(Number(v))}
             yAxisTextStyle={s.axis}
@@ -168,6 +219,9 @@ const s = StyleSheet.create({
   segBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   segActive: { backgroundColor: colors.supplier },
   axis: { color: colors.muted, fontSize: 10 },
+  orderRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  orderTitle: { fontSize: 14, fontWeight: "600", color: colors.text },
+  orderTotal: { fontSize: 15, fontWeight: "800", color: colors.supplier },
   tooltip: { backgroundColor: colors.text, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6 },
   tooltipText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   pieRow: { flexDirection: "row", alignItems: "center", gap: 20, marginTop: 12, flexWrap: "wrap", justifyContent: "center" },

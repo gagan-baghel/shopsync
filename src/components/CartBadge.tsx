@@ -28,7 +28,7 @@ export function CartBadge({ color = colors.text, size = 24 }: { color?: string; 
   const iconStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${rotate.value}deg` }] }));
 
   return (
-    <Animated.View style={[{ width: size + 8, height: size + 4 }, iconStyle]}>
+    <Animated.View style={[{ width: size, height: size }, iconStyle]}>
       <Ionicons name="bag-handle-outline" size={size} color={color} />
       {count > 0 && (
         <Animated.View style={[s.badge, badgeStyle]}>
@@ -41,7 +41,7 @@ export function CartBadge({ color = colors.text, size = 24 }: { color?: string; 
 
 const s = StyleSheet.create({
   badge: {
-    position: "absolute", top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
+    position: "absolute", top: -6, right: -10, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
     backgroundColor: colors.danger, alignItems: "center", justifyContent: "center",
     borderWidth: 2, borderColor: "#fff",
   },

@@ -20,7 +20,7 @@ export default function CustomerTabs() {
       />
       <Tabs.Screen
         name="cart"
-        options={{ title: "Cart", tabBarIcon: ({ color }) => <CartBadge color={color as string} /> }}
+        options={{ title: "Cart", tabBarIcon: ({ color, size }) => <CartBadge color={color as string} size={size} /> }}
       />
       <Tabs.Screen
         name="support"

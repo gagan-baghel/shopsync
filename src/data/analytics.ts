@@ -14,9 +14,7 @@ export const categoryShare = [
   { label: "Sports", value: 8, color: "#64748B" },
 ];
 
-export const kpis = [
-  { label: "Revenue (YTD)", value: "$356.8k", delta: "+18.2%", up: true, icon: "cash-outline" },
-  { label: "Orders", value: "4,812", delta: "+9.6%", up: true, icon: "receipt-outline" },
-  { label: "Avg. order", value: "$74.15", delta: "+7.8%", up: true, icon: "trending-up-outline" },
-  { label: "Returns", value: "2.4%", delta: "-0.6%", up: true, icon: "return-down-back-outline" },
-] as const;
+// Historical (static) figures; live orders from Convex are added on top in the dashboard.
+export const baseline = { revenue: 356800, orders: 4812 };
+// Same period last year — year-over-year deltas are computed live against these.
+export const lastYear = { revenue: 301860, orders: 4390 };

@@ -22,6 +22,7 @@ The login screen has a role selector (Customer/Supplier cards), email, password 
   - Cart with +/- quantity and **swipe-left-to-delete** (Gesture Handler Pan + Reanimated, running on the UI thread). Empty cart has its own state.
   - Support chat.
 - **Supplier**
+  - Live sales: customer checkouts are saved as orders in Convex (priced server-side, stock deducted), and the dashboard's revenue, order count, year-over-year deltas, monthly chart and "Recent orders" update instantly.
   - Analytics: KPI tiles, revenue trend with a line/bar toggle and touch tooltip (react-native-gifted-charts), and a category donut drawn with react-native-svg.
   - Inventory: live in-stock switches and a bottom-sheet stock editor. Changes are written to Convex, so customers see stock updates instantly.
   - Add product: bottom-sheet form (name, price, stock, category, optional image URL and description), validated on the server. New products appear instantly in every customer's catalog.
@@ -38,7 +39,7 @@ The login screen has a role selector (Customer/Supplier cards), email, password 
 ## Structure
 
 ```
-convex/            backend: schema, auth (sessions), chat, inventory, products, seed
+convex/            backend: schema, auth (sessions), chat, inventory, products, orders, seed
 src/app/           expo-router routes
   index.tsx          login / role switcher
   (customer)/        shop, cart, support tabs

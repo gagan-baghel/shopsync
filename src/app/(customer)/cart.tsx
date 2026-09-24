@@ -1,4 +1,7 @@
-import { useEffect } from "react";
+import { useMutation } from "convex/react";
+import { ConvexError } from "convex/values";
+import { useEffect, useState } from "react";
+import { api } from "../../../convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { ActivityIndicator, Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
@@ -16,6 +19,9 @@ export default function Cart() {
   const setQty = useStore((s) => s.setQty);
   const clearCart = useStore((s) => s.clearCart);
   const inventory = useInventory();
+  const token = useStore((s) => s.session?.token ?? "");
+  const placeOrder = useMutation(api.orders.place);
+  const [placing, setPlacing] = useState(false);
   const products = useProducts();
   // A supplier may delete a product that's sitting in the cart; drop it so totals and the badge stay honest.
   useEffect(() => {
@@ -48,11 +54,21 @@ export default function Cart() {
   const subtotal = items.reduce((a, { p, qty }) => a + p.price * qty, 0);
   const shipping = subtotal >= SHIPPING_FREE_OVER ? 0 : 6.99;
 
-  const checkout = () => {
-    const msg = `Order placed for ${money(subtotal + shipping)} (demo).`;
-    if (Platform.OS === "web") window.alert(msg);
-    else Alert.alert("Thank you!", msg);
-    clearCart();
+  const notify = (title: string, msg: string) =>
+    Platform.OS === "web" ? window.alert(`${title}\n${msg}`) : Alert.alert(title, msg);
+
+  const checkout = async () => {
+    if (placing) return;
+    setPlacing(true);
+    try {
+      const { total } = await placeOrder({ token, items: items.map(({ p, qty }) => ({ productId: p.id, qty })) });
+      clearCart();
+      notify("Order placed!", `Thank you! We charged ${money(total)}.`);
+    } catch (e) {
+      notify("Couldn't place order", e instanceof ConvexError ? String(e.data) : "Check your connection and try again.");
+    } finally {
+      setPlacing(false);
+    }
   };
 
   return (
@@ -93,8 +109,8 @@ export default function Cart() {
         <Line label="Subtotal" value={money(subtotal)} />
         <Line label="Shipping" value={shipping ? money(shipping) : "Free"} />
         <Line label="Total" value={money(subtotal + shipping)} bold />
-        <Pressable style={[s.btn, blocked && { backgroundColor: colors.border }]} onPress={checkout} disabled={blocked}>
-          <Text style={s.btnText}>{blocked ? "Fix unavailable items" : "Checkout"}</Text>
+        <Pressable style={[s.btn, blocked && { backgroundColor: colors.border }]} onPress={checkout} disabled={blocked || placing}>
+          {placing ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>{blocked ? "Fix unavailable items" : "Checkout"}</Text>}
         </Pressable>
       </View>
     </View>
