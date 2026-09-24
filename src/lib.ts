@@ -13,25 +13,25 @@ export type Product = {
   description: string;
   specs: Record<string, string>;
 };
-const staticProducts = productsJson as Product[];
-export const categories = [...new Set(staticProducts.map((p) => p.category))];
+// Category list is fixed; the products themselves live in Convex (seeded from products.json).
+export const categories = [...new Set((productsJson as { category: string }[]).map((p) => p.category))];
 
-/** Static catalog + supplier-added products (live from Convex), newest additions first. */
+/** Every product, live from Convex (supplier adds/edits/deletes show up instantly). */
 export function useProducts() {
-  const added = useQuery(api.products.list);
+  const docs = useQuery(api.products.list);
   return useMemo(() => {
-    const extra: Product[] = (added ?? []).map((d) => ({
-      id: d._id,
+    const list: Product[] = (docs ?? []).map((d) => ({
+      id: d.key ?? d._id,
       name: d.name,
       category: d.category,
       price: d.price,
+      rating: d.rating,
       image: d.image,
       description: d.description,
-      specs: {},
+      specs: d.specs ?? {},
     }));
-    const list = [...extra, ...staticProducts];
-    return { list, byId: new Map(list.map((p) => [p.id, p])), loading: added === undefined };
-  }, [added]);
+    return { list, byId: new Map(list.map((p) => [p.id, p])), loading: docs === undefined };
+  }, [docs]);
 }
 
 export const money = (n: number) => `$${n.toFixed(2)}`;

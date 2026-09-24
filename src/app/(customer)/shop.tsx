@@ -3,7 +3,7 @@ import { FlashList } from "@shopify/flash-list";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { memo, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { EmptyState } from "@/components/EmptyState";
 import { ProductImage } from "@/components/ProductImage";
 import { categories, money, Product, useDebounced, useInventory, useProducts } from "@/lib";
@@ -109,12 +109,16 @@ export default function Shop() {
           <ProductCard p={item} available={inventory?.get(item.id)?.inStock ?? true} stock={inventory?.get(item.id)?.stock} />
         )}
         ListEmptyComponent={
+          products.loading ? (
+            <ActivityIndicator style={{ marginTop: 48 }} color={colors.primary} />
+          ) : (
           <EmptyState
             icon="search-outline"
             title="No products found"
             subtitle={`Nothing matches "${query}"${category ? ` in ${category}` : ""}. Try another search or category.`}
             action={{ label: "Clear filters", onPress: () => { setQuery(""); setCategory(null); } }}
           />
+          )
         }
       />
     </View>

@@ -2,22 +2,54 @@ import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import { ReactNode, useState } from "react";
 import {
-  ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "../../convex/_generated/api";
-import { categories } from "@/lib";
+import { categories, Product } from "@/lib";
 import { useStore } from "@/store";
 import { colors } from "@/theme";
 
 const EMPTY = { name: "", price: "", stock: "10", category: categories[0], image: "", description: "" };
 
-/** Bottom-sheet form for suppliers to list a new product. The server re-validates every field. */
-export function AddProductSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+const fromProduct = (p: Product, stock: number) => ({
+  name: p.name,
+  price: String(p.price),
+  stock: String(stock),
+  category: p.category,
+  image: p.image ?? "",
+  description: p.description,
+});
+
+const confirmDelete = (name: string, onYes: () => void) => {
+  const msg = `Delete "${name}"? Customers will no longer see it.`;
+  if (Platform.OS === "web") {
+    if (window.confirm(msg)) onYes();
+  } else {
+    Alert.alert("Delete product", msg, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: onYes },
+    ]);
+  }
+};
+
+/**
+ * Supplier form to add a product, or (with `product`) edit every field and delete it.
+ * Remount per product (`key`) so the fields start from its current values. The server re-validates everything.
+ */
+export function ProductSheet({ visible, onClose, product, stock = 0 }: {
+  visible: boolean;
+  onClose: () => void;
+  product?: Product | null;
+  stock?: number;
+}) {
   const insets = useSafeAreaInsets();
   const token = useStore((s) => s.session?.token ?? "");
   const create = useMutation(api.products.create);
-  const [form, setForm] = useState(EMPTY);
+  const update = useMutation(api.products.update);
+  const remove = useMutation(api.products.remove);
+  const editing = !!product;
+  const [form, setForm] = useState(() => (product ? fromProduct(product, stock) : EMPTY));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const set = (k: keyof typeof EMPTY) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -41,7 +73,9 @@ export function AddProductSheet({ visible, onClose }: { visible: boolean; onClos
     setSaving(true);
     setError(null);
     try {
-      await create({ token, name: form.name, category: form.category, price, stock, image: form.image, description: form.description });
+      const fields = { token, name: form.name, category: form.category, price, stock, image: form.image, description: form.description };
+      if (product) await update({ id: product.id, ...fields });
+      else await create(fields);
       reset();
     } catch (e) {
       setError(e instanceof ConvexError ? String(e.data) : "Couldn't save. Check your connection and try again.");
@@ -50,13 +84,27 @@ export function AddProductSheet({ visible, onClose }: { visible: boolean; onClos
     }
   };
 
+  const onDelete = () =>
+    product &&
+    confirmDelete(product.name, async () => {
+      setSaving(true);
+      try {
+        await remove({ token, id: product.id });
+        setSaving(false);
+        reset();
+      } catch (e) {
+        setSaving(false);
+        setError(e instanceof ConvexError ? String(e.data) : "Couldn't delete. Check your connection and try again.");
+      }
+    });
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close} statusBarTranslucent navigationBarTranslucent>
       <Pressable style={s.backdrop} onPress={close} accessibilityLabel="Close" />
       <KeyboardAvoidingView behavior="padding" style={{ flexShrink: 1 }}>
         <View style={[s.sheet, { paddingBottom: 20 + insets.bottom }]}>
           <View style={s.handle} />
-          <Text style={s.title}>Add product</Text>
+          <Text style={s.title}>{editing ? "Edit product" : "Add product"}</Text>
           <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 460, flexShrink: 1 }} contentContainerStyle={{ gap: 4 }}>
             <Field label="Name">
               <TextInput style={s.input} value={form.name} onChangeText={set("name")} placeholder="e.g. Wireless Mouse" placeholderTextColor={colors.muted} maxLength={80} />
@@ -87,11 +135,17 @@ export function AddProductSheet({ visible, onClose }: { visible: boolean; onClos
           </ScrollView>
           {error && <Text style={s.error}>{error}</Text>}
           <View style={s.actions}>
-            <Pressable style={[s.action, s.cancel]} onPress={close}>
-              <Text style={[s.actionText, { color: colors.text }]}>Cancel</Text>
-            </Pressable>
+            {editing ? (
+              <Pressable style={[s.action, s.delete]} onPress={onDelete} disabled={saving} accessibilityLabel="Delete product">
+                <Text style={[s.actionText, { color: colors.danger }]}>Delete</Text>
+              </Pressable>
+            ) : (
+              <Pressable style={[s.action, s.cancel]} onPress={close}>
+                <Text style={[s.actionText, { color: colors.text }]}>Cancel</Text>
+              </Pressable>
+            )}
             <Pressable style={[s.action, { backgroundColor: colors.supplier }]} onPress={submit} disabled={saving}>
-              {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.actionText}>Add product</Text>}
+              {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.actionText}>{editing ? "Update" : "Add product"}</Text>}
             </Pressable>
           </View>
         </View>
@@ -127,5 +181,6 @@ const s = StyleSheet.create({
   actions: { flexDirection: "row", gap: 12, marginTop: 16 },
   action: { flex: 1, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   cancel: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border },
+  delete: { backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA" },
   actionText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });

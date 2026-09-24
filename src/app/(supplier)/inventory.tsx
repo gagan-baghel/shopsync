@@ -4,12 +4,11 @@ import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import { useState } from "react";
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View,
+  ActivityIndicator, Alert, Pressable, StyleSheet, Switch, Text, View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "../../../convex/_generated/api";
 import { router } from "expo-router";
-import { AddProductSheet } from "@/components/AddProductSheet";
+import { ProductSheet } from "@/components/ProductSheet";
 import { ProductImage } from "@/components/ProductImage";
 import { Product, useInventory, useProducts } from "@/lib";
 import { useStore } from "@/store";
@@ -85,7 +84,7 @@ export default function Inventory() {
                   {stock} units
                 </Text>
               </View>
-              <Pressable onPress={() => setEditing(p)} hitSlop={8} style={s.editBtn} accessibilityLabel={`Edit stock for ${p.name}`}>
+              <Pressable onPress={() => setEditing(p)} hitSlop={8} style={s.editBtn} accessibilityLabel={`Edit ${p.name}`}>
                 <Text style={s.edit}>Edit</Text>
               </Pressable>
               <Switch
@@ -99,16 +98,13 @@ export default function Inventory() {
           );
         }}
       />
-      <AddProductSheet visible={adding} onClose={() => setAdding(false)} />
-      <StockSheet
-        key={editing?.id ?? "closed"} // remount per product so the input starts at its current stock
+      <ProductSheet visible={adding} onClose={() => setAdding(false)} />
+      <ProductSheet
+        key={editing?.id ?? "closed"} // remount per product so the form starts from its current values
+        visible={!!editing}
         product={editing}
-        current={editing ? (inventory.get(editing.id)?.stock ?? 0) : 0}
+        stock={editing ? (inventory.get(editing.id)?.stock ?? 0) : 0}
         onClose={() => setEditing(null)}
-        onSave={(stock) => {
-          if (editing) save({ productId: editing.id, stock });
-          setEditing(null);
-        }}
       />
     </View>
   );
@@ -120,67 +116,6 @@ function Stat({ label, value, color }: { label: string; value: number; color: st
       <Text style={[s.statValue, { color }]}>{value}</Text>
       <Text style={s.statLabel}>{label}</Text>
     </View>
-  );
-}
-
-function StockSheet({
-  product, current, onClose, onSave,
-}: { product: Product | null; current: number; onClose: () => void; onSave: (n: number) => void }) {
-  const insets = useSafeAreaInsets();
-  const [value, setValue] = useState(String(current));
-  const n = Math.max(0, parseInt(value, 10) || 0);
-  const bump = (d: number) => setValue(String(Math.max(0, n + d)));
-
-  return (
-    <Modal
-      visible={!!product}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent
-      navigationBarTranslucent
-    >
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel="Close" />
-      <KeyboardAvoidingView behavior="padding">
-        <View style={[s.sheet, { paddingBottom: 20 + insets.bottom }]}>
-          <View style={s.handle} />
-          <Text style={s.sheetTitle}>Update stock</Text>
-          <Text style={s.sheetSub} numberOfLines={1}>{product?.name}</Text>
-          <View style={s.stepper}>
-            {[-10, -1].map((d) => (
-              <Pressable key={d} style={s.step} onPress={() => bump(d)}>
-                <Text style={s.stepText}>{d}</Text>
-              </Pressable>
-            ))}
-            <TextInput
-              style={s.stockInput}
-              value={value}
-              onChangeText={(t) => setValue(t.replace(/[^0-9]/g, "").slice(0, 5))}
-              keyboardType="number-pad"
-              selectTextOnFocus
-            />
-            {[1, 10].map((d) => (
-              <Pressable key={d} style={s.step} onPress={() => bump(d)}>
-                <Text style={s.stepText}>+{d}</Text>
-              </Pressable>
-            ))}
-          </View>
-          {n === 0 && (
-            <Text style={s.warn}>
-              <Ionicons name="warning-outline" size={13} /> Setting stock to 0 marks the item out of stock.
-            </Text>
-          )}
-          <View style={s.actions}>
-            <Pressable style={[s.action, s.cancel]} onPress={onClose}>
-              <Text style={[s.actionText, { color: colors.text }]}>Cancel</Text>
-            </Pressable>
-            <Pressable style={[s.action, { backgroundColor: colors.supplier }]} onPress={() => onSave(n)}>
-              <Text style={s.actionText}>Save</Text>
-            </Pressable>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
   );
 }
 

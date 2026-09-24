@@ -26,13 +26,16 @@ export default defineSchema({
 
   // Products added by suppliers at runtime (the base catalog ships as static JSON in the app).
   products: defineTable({
+    key: v.optional(v.string()), // stable id for seeded catalog items ("p1"…); new products use their _id
     name: v.string(),
     category: v.string(),
     price: v.number(),
     description: v.string(),
     image: v.optional(v.string()),
-    createdBy: v.id("users"),
-  }),
+    rating: v.optional(v.number()),
+    specs: v.optional(v.record(v.string(), v.string())),
+    createdBy: v.optional(v.id("users")),
+  }).index("by_key", ["key"]),
 
   inventory: defineTable({
     productId: v.string(),

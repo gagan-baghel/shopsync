@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { ActivityIndicator, Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
@@ -16,6 +17,10 @@ export default function Cart() {
   const clearCart = useStore((s) => s.clearCart);
   const inventory = useInventory();
   const products = useProducts();
+  // A supplier may delete a product that's sitting in the cart; drop it so totals and the badge stay honest.
+  useEffect(() => {
+    if (!products.loading) Object.keys(cart).forEach((id) => !products.byId.has(id) && setQty(id, 0));
+  }, [products, cart, setQty]);
   const items = Object.entries(cart).flatMap(([id, qty]) => {
     const p = products.byId.get(id);
     return p ? [{ p, qty }] : [];

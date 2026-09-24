@@ -22,6 +22,18 @@ export const run = internalMutation({
         .unique();
       if (!exists) await ctx.db.insert("users", { ...a, passwordHash });
     }
+    // Catalog lives in Convex so suppliers can edit/delete it; keep the static ids ("p1"…) stable.
+    // Insert in reverse so the newest-first list shows p1 first.
+    for (const p of [...products].reverse()) {
+      const exists = await ctx.db
+        .query("products")
+        .withIndex("by_key", (q) => q.eq("key", p.id))
+        .unique();
+      if (!exists) {
+        const { id, ...fields } = p;
+        await ctx.db.insert("products", { key: id, ...fields });
+      }
+    }
     for (const [i, p] of products.entries()) {
       const exists = await ctx.db
         .query("inventory")
